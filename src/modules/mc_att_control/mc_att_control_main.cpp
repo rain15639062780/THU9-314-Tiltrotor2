@@ -90,8 +90,8 @@
  */
 extern "C" __EXPORT int mc_att_control_main(int argc, char *argv[]);
 
-#define YAW_DEADZONE	0.05f
-#define MIN_TAKEOFF_THRUST    0.2f
+#define YAW_DEADZONE	0.02f           //before 0.05f to 0.02(2017.8.14)
+#define MIN_TAKEOFF_THRUST    0.4f     //before 0.2f to 0.4f(2017.8.14)
 #define TPA_RATE_LOWER_LIMIT 0.05f
 #define MANUAL_THROTTLE_MAX_MULTICOPTER	0.9f
 #define ATTITUDE_TC_DEFAULT 0.2f
