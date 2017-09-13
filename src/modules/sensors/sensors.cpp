@@ -457,7 +457,7 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
 		 */
 
 		int selected_source = -1;
-		orb_advert_t tmp_h = nullptr;
+        //orb_advert_t tmp_h = nullptr;
 
 		if (ret >= (int)sizeof(buf_adc[0])) {
 
@@ -507,14 +507,26 @@ Sensors::adc_poll(struct sensor_combined_s &raw)
 							selected_source = b;
 
 							/* Move the selected_source to instance 0 */
-							if (_battery_pub_intance0ndx != b) {
+                            /*if (_battery_pub_intance0ndx != b) {
 
 								tmp_h = _battery_pub[_battery_pub_intance0ndx];
 								_battery_pub[_battery_pub_intance0ndx] = _battery_pub[b];
 								_battery_pub[b] = tmp_h;
 								_battery_pub_intance0ndx = b;
-							}
-						}
+                            }*/
+#if BOARD_NUMBER_BRICKS > 1
+
+                            /* Move the selected_source to instance 0 */
+                            if (_battery_pub_intance0ndx != selected_source) {
+
+                                orb_advert_t tmp_h = _battery_pub[_battery_pub_intance0ndx];
+                                _battery_pub[_battery_pub_intance0ndx] = _battery_pub[selected_source];
+                                _battery_pub[selected_source] = tmp_h;
+                                _battery_pub_intance0ndx = selected_source;
+                            }
+
+#endif
+                        }
 
 						// todo:per brick scaling
 						/* look for specific channels and process the raw voltage to measurement data */
