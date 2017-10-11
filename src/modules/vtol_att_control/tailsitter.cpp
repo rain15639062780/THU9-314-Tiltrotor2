@@ -44,8 +44,8 @@
 
 #define ARSP_YAW_CTRL_DISABLE 7.0f	// airspeed at which we stop controlling yaw during a front transition
 #define THROTTLE_TRANSITION_MAX 0.25f	// maximum added thrust above last value in transition
-#define PITCH_TRANSITION_FRONT_P1 -1.3f	// pitch angle to switch to TRANSITION_P2
-#define PITCH_TRANSITION_FRONT_P2 -1.4f	// pitch angle to switch to FW
+#define PITCH_TRANSITION_FRONT_P1 -1.35f	// pitch angle to switch to TRANSITION_P2
+#define PITCH_TRANSITION_FRONT_P2 -1.5f	// pitch angle to switch to FW
 #define PITCH_TRANSITION_BACK -0.25f	// pitch angle to switch to MC
 
 Tailsitter::Tailsitter(VtolAttitudeControl *attc) :
@@ -486,8 +486,8 @@ void Tailsitter::fill_actuator_outputs()
 		// in fixed wing mode we use engines only for providing thrust, no moments are generated
 		_actuators_out_0->timestamp = _actuators_fw_in->timestamp;
 		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] = 0;
-		//_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = 0;
-            _actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]*0.5f;
+		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = 0;
+           // _actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]*0f;
             
             
 		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = 0;
@@ -496,8 +496,8 @@ void Tailsitter::fill_actuator_outputs()
 
 		_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
 			-_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];	// roll elevon
-            _actuators_out_1->control[actuator_controls_s::INDEX_PITCH] =0;//(
-			//_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim);	// pitch elevon
+            _actuators_out_1->control[actuator_controls_s::INDEX_PITCH] =(
+			_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim);	// pitch elevon
 		_actuators_out_1->control[actuator_controls_s::INDEX_YAW] =
 			_actuators_fw_in->control[actuator_controls_s::INDEX_YAW];	// yaw
 		_actuators_out_1->control[actuator_controls_s::INDEX_THROTTLE] =
