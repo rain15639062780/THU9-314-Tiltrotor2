@@ -43,9 +43,10 @@
 #include "vtol_att_control_main.h"
 
 #define ARSP_YAW_CTRL_DISABLE 7.0f	// airspeed at which we stop controlling yaw during a front transition
-#define THROTTLE_TRANSITION_MAX 0.25f	// maximum added thrust above last value in transition
-#define PITCH_TRANSITION_FRONT_P1 -1.35f	// pitch angle to switch to TRANSITION_P2
-#define PITCH_TRANSITION_FRONT_P2 -1.5f	// pitch angle to switch to FW
+#define THROTTLE_TRANSITION_MAX 0.15f    // maximum added thrust above last value in transition
+//#define THROTTLE_TRANSITION_MAX 0.25f	// maximum added thrust above last value in transition
+#define PITCH_TRANSITION_FRONT_P1 -1.45f	// pitch angle to switch to TRANSITION_P2
+#define PITCH_TRANSITION_FRONT_P2 -1.52f	// pitch angle to switch to FW
 #define PITCH_TRANSITION_BACK -0.25f	// pitch angle to switch to MC
 
 Tailsitter::Tailsitter(VtolAttitudeControl *attc) :
@@ -337,7 +338,7 @@ void Tailsitter::update_transition_state()
 		_v_att_sp->thrust = _thrust_transition_start * 0.9f;
 
 		/** keep yaw disabled */
-		//_mc_yaw_weight = 0.0f;
+		_mc_yaw_weight = 0.0f;
         
         //xj-zhang test
 		_v_att_sp->yaw_body=_yaw_transition;
@@ -347,13 +348,10 @@ void Tailsitter::update_transition_state()
 				  (_params_tailsitter.back_trans_dur * 1000000.0f);
 		_mc_pitch_weight = 1.0f * (float)hrt_elapsed_time(&_vtol_schedule.transition_start) /
 				   (_params_tailsitter.back_trans_dur * 1000000.0f);
-		_mc_yaw_weight = 1.0f * (float)hrt_elapsed_time(&_vtol_schedule.transition_start) /
-                (_params_tailsitter.back_trans_dur * 1000000.0f);
+        //wangxy668 2017-11-1
+        _mc_pitch_weight = 1.0f;
 
 	}
-
-
-
 
 	_mc_roll_weight = math::constrain(_mc_roll_weight, 0.0f, 1.0f);
 	_mc_yaw_weight = math::constrain(_mc_yaw_weight, 0.0f, 1.0f);
@@ -486,8 +484,9 @@ void Tailsitter::fill_actuator_outputs()
 		// in fixed wing mode we use engines only for providing thrust, no moments are generated
 		_actuators_out_0->timestamp = _actuators_fw_in->timestamp;
 		_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] = 0;
-		_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = 0;
-           // _actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]*0f;
+		//_actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = 0;
+            //wangxy668 2017-11-1
+            _actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = _actuators_fw_in->control[actuator_controls_s::INDEX_PITCH]*1.0f;
             
             
 		_actuators_out_0->control[actuator_controls_s::INDEX_YAW] = 0;
