@@ -526,6 +526,9 @@ void Tailsitter::fill_actuator_outputs()
 //            -_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL]* (1 - _mc_roll_weight);
  //wangxy668 2017-11-15
             _actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =_actuators_mc_in->control[actuator_controls_s::INDEX_YAW];
+            
+            _actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
+            -_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];
             _actuators_out_1->control[actuator_controls_s::INDEX_PITCH] =
             _actuators_mc_in->control[actuator_controls_s::INDEX_PITCH]*(_mc_pitch_weight*0.7f+0.3f);
 		// **LATER** + (_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim) *(1 - _mc_pitch_weight);

@@ -219,19 +219,19 @@ void Tiltrotor::update_vtol_state()
 				bool transition_to_p2 = can_transition_on_ground();
 
 				// check if we have reached airspeed to switch to fw mode
-				transition_to_p2 |= _params_tiltrotor.airspeed_mode != control_state_s::AIRSPD_MODE_DISABLED &&
+				/*transition_to_p2 |= _params_tiltrotor.airspeed_mode != control_state_s::AIRSPD_MODE_DISABLED &&
 						    _airspeed->indicated_airspeed_m_s >= _params_tiltrotor.airspeed_trans &&
-						    (float)hrt_elapsed_time(&_vtol_schedule.transition_start) > (_params->front_trans_time_min * 1e6f);
+						    (float)hrt_elapsed_time(&_vtol_schedule.transition_start) > (_params->front_trans_time_min * 1e6f);*///zx
 
 				// check if airspeed is invalid and transition by time
 				transition_to_p2 |= _params_tiltrotor.airspeed_mode == control_state_s::AIRSPD_MODE_DISABLED &&
 						    _tilt_control > _params_tiltrotor.tilt_transition &&
 						    (float)hrt_elapsed_time(&_vtol_schedule.transition_start) > (_params->front_trans_time_openloop * 1e6f);
 
-				if (transition_to_p2) {
+				/*if (transition_to_p2) {
 					_vtol_schedule.flight_mode = TRANSITION_FRONT_P2;
 					_vtol_schedule.transition_start = hrt_absolute_time();
-				}
+				}*///zx revised in 2018.2.2
 
 				break;
 			}
@@ -332,8 +332,11 @@ void Tiltrotor::update_transition_state()
 			_tilt_control = _params_tiltrotor.tilt_mc +
 					fabsf(_params_tiltrotor.tilt_transition - _params_tiltrotor.tilt_mc) * (float)hrt_elapsed_time(
 						&_vtol_schedule.transition_start) / (_params_tiltrotor.front_trans_dur * 1000000.0f);
-		}
-
+   //                 fabsf(0.1f - _params_tiltrotor.tilt_mc) * (float)hrt_elapsed_time(
+   //                     &_vtol_schedule.transition_start) / (_params_tiltrotor.front_trans_dur * 1000000.0f);
+            
+       
+        }
 		bool use_airspeed = _params_tiltrotor.airspeed_mode != control_state_s::AIRSPD_MODE_DISABLED;
 
 		// at low speeds give full weight to MC
@@ -418,6 +421,7 @@ void Tiltrotor::waiting_on_tecs()
 /**
 * Write data to actuator output topic.
 */
+/*
 void Tiltrotor::fill_actuator_outputs()
 {
 	_actuators_out_0->timestamp = _actuators_mc_in->timestamp;
@@ -432,7 +436,7 @@ void Tiltrotor::fill_actuator_outputs()
 		_actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] =
 			_actuators_fw_in->control[actuator_controls_s::INDEX_THROTTLE];
 
-		/* allow differential thrust if enabled */
+		// allow differential thrust if enabled
 		if (_params_tiltrotor.diff_thrust == 1) {
 			_actuators_out_0->control[actuator_controls_s::INDEX_ROLL] =
 				_actuators_fw_in->control[actuator_controls_s::INDEX_YAW] * _params_tiltrotor.diff_thrust_scale;
@@ -444,15 +448,30 @@ void Tiltrotor::fill_actuator_outputs()
 	}
 
 	_actuators_out_1->timestamp = _actuators_fw_in->timestamp;
-	_actuators_out_1->control[actuator_controls_s::INDEX_ROLL] =
-		-_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];
-	_actuators_out_1->control[actuator_controls_s::INDEX_PITCH] =
-		(_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim);
-	_actuators_out_1->control[actuator_controls_s::INDEX_YAW] =
-		_actuators_fw_in->control[actuator_controls_s::INDEX_YAW];	// yaw
+    _actuators_out_1->control[actuator_controls_s::INDEX_ROLL] = 0.0f;
+		//-_actuators_fw_in->control[actuator_controls_s::INDEX_ROLL];
+    _actuators_out_1->control[actuator_controls_s::INDEX_PITCH] = 0.0f;
+		//(_actuators_fw_in->control[actuator_controls_s::INDEX_PITCH] + _params->fw_pitch_trim);
+    _actuators_out_1->control[actuator_controls_s::INDEX_YAW] =
+      _actuators_mc_in->control[actuator_controls_s::INDEX_YAW] *_mc_yaw_weight;//有反馈 但遥控器无法控制舵面
+      //_actuators_fw_in->control[actuator_controls_s::INDEX_YAW] *_mc_yaw_weight;
+          //_actuators_mc_in->control[actuator_controls_s::INDEX_ROLL]；
+		//_actuators_fw_in->control[actuator_controls_s::INDEX_YAW];	// yaw 遥控器能控制舵面 但无反馈
 	_actuators_out_1->control[4] = _tilt_control;
 }
+*/
 
+void Tiltrotor::fill_actuator_outputs()
+{
+    _actuators_out_0->timestamp = _actuators_mc_in->timestamp;
+    _actuators_out_0->control[actuator_controls_s::INDEX_ROLL] = _actuators_mc_in->control[actuator_controls_s::INDEX_ROLL];
+    _actuators_out_0->control[actuator_controls_s::INDEX_PITCH] = _actuators_mc_in->control[actuator_controls_s::INDEX_PITCH];
+    _actuators_out_0->control[actuator_controls_s::INDEX_YAW] = _actuators_mc_in->control[actuator_controls_s::INDEX_YAW];
+    _actuators_out_0->control[actuator_controls_s::INDEX_THROTTLE] = _actuators_mc_in->control[actuator_controls_s::INDEX_THROTTLE];
+    
+    _actuators_out_1->control[actuator_controls_s::INDEX_YAW] = -_actuators_mc_in->control[actuator_controls_s::INDEX_YAW];
+    _actuators_out_1->control[4] = _tilt_control;
+}
 
 /**
 * Set state of rear motors.

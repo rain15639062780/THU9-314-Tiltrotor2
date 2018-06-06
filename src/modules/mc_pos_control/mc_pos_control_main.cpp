@@ -2391,11 +2391,13 @@ MulticopterPositionControl::task_main()
 
 		/* update previous velocity for velocity controller D part */
 		_vel_prev = _vel;
-        //xj-zhang add
+        //xj-zhang added. For tailsitter.
+        /*
         if( _vehicle_status.in_transition_mode)
         {
             _att_sp.yaw_body = _yaw;
         }
+         */
 		/* publish attitude setpoint
 		 * Do not publish if offboard is enabled but position/velocity/accel control is disabled,
 		 * in this case the attitude setpoint is published by the mavlink app. Also do not publish
