@@ -21,7 +21,12 @@
 
 sh /etc/init.d/rc.fw_defaults
 
-set MIXER AETRFG
+#vtol_tiltrotor mixer
+set MIXER AETRFG_vtol
+
+
+#standard mixer
+#set MIXER AETRFG_standard
 
 set PWM_RATE 50
 set PWM_AUX_RATE 50

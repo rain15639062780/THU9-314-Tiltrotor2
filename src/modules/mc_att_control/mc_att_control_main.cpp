@@ -191,6 +191,21 @@ private:
 	math::Vector<3>		_rates_sp;		/**< angular rates setpoint */
 	math::Vector<3>		_rates_int;		/**< angular rates integral error */
 	float				_thrust_sp;		/**< thrust setpoint */
+	/*******************************************************/
+	// wangxy668 2017-10-23//
+	math::Vector<3>		_theta_rate;		/**< theta rate modified*/
+	math::Vector<3>		_theta_rate_alpha;
+	math::Vector<3>		_theta_rate_beta;
+	math::Vector<3>		_theta_rate_ck;
+	math::Vector<3>		_theta_rate_input;
+	float _theta_rate_control_prev;
+	float _adaptive_time;
+	float _theta_rate_sp;
+	float _theta_rate_sp_prev;
+	float temp0;
+	/*********************************************************/
+
+
 	math::Vector<3>		_att_control;	/**< attitude control vector */
 
 	math::Matrix<3, 3>  _I;				/**< identity matrix */
@@ -325,10 +340,18 @@ private:
 	 */
 	void		control_attitude(float dt);
 
+
 	/**
 	 * Attitude rates controller.
 	 */
 	void		control_attitude_rates(float dt);
+
+
+	//rain 2018-4-25 11:11:50
+	/**
+	 * Attitude rates adaptive controller.
+	 */
+	void        control_attitude_rates_adaptive(float dt);
 
 	/**
 	 * Throttle PID attenuation.
@@ -533,6 +556,24 @@ MulticopterAttitudeControl::MulticopterAttitudeControl() :
 		_sensor_correction.gyro_scale_1[i] = 1.0f;
 		_sensor_correction.gyro_scale_2[i] = 1.0f;
 	}
+	/************************************/
+	// wangxy668 2017-10-23//
+	for (unsigned i = 0; i < 3; i++) {
+	_theta_rate(i) = 0.0f;
+	_theta_rate_alpha(i) = 0.0f;
+	_theta_rate_beta(i) = 60.0f;
+	_theta_rate_ck(i) = 0.0f;
+	_theta_rate_input(i) = 0.0f;
+	}
+	_theta_rate_control_prev = 0.0f;
+	_adaptive_time = 0.0f;
+	_theta_rate_sp = 0.0f;
+	_theta_rate_sp_prev = 0.0f;
+	temp0 = 0.0f;
+
+	/*************************************/
+
+
 
 }
 
@@ -1073,6 +1114,220 @@ MulticopterAttitudeControl::control_attitude_rates(float dt)
 	}
 }
 
+
+
+/*
+ *rain 2018-4-25 11:16:24
+ *实现简易替换内环PID控制器
+ * Attitude rates adaptive controller.
+ * Input: '_rates_sp' vector, '_thrust_sp'
+ * Output: '_att_control' vector
+ */
+	void
+MulticopterAttitudeControl::control_attitude_rates_adaptive(float dt)
+{
+	/* reset integral if disarmed */
+	if (!_armed.armed || !_vehicle_status.is_rotary_wing) {
+		_rates_int.zero();
+	}
+
+	/* get transformation matrix from sensor/board to body frame */
+	get_rot_matrix((enum Rotation)_params.board_rotation, &_board_rotation);
+
+	/* fine tune the rotation */
+	math::Matrix<3, 3> board_rotation_offset;
+	board_rotation_offset.from_euler(M_DEG_TO_RAD_F * _params.board_offset[0],
+			M_DEG_TO_RAD_F * _params.board_offset[1],
+			M_DEG_TO_RAD_F * _params.board_offset[2]);
+	_board_rotation = board_rotation_offset * _board_rotation;
+
+	// get the raw gyro data and correct for thermal errors
+	math::Vector<3> rates;
+
+	if (_selected_gyro == 0) {
+		rates(0) = (_sensor_gyro.x - _sensor_correction.gyro_offset_0[0]) * _sensor_correction.gyro_scale_0[0];
+		rates(1) = (_sensor_gyro.y - _sensor_correction.gyro_offset_0[1]) * _sensor_correction.gyro_scale_0[1];
+		rates(2) = (_sensor_gyro.z - _sensor_correction.gyro_offset_0[2]) * _sensor_correction.gyro_scale_0[2];
+
+	} else if (_selected_gyro == 1) {
+		rates(0) = (_sensor_gyro.x - _sensor_correction.gyro_offset_1[0]) * _sensor_correction.gyro_scale_1[0];
+		rates(1) = (_sensor_gyro.y - _sensor_correction.gyro_offset_1[1]) * _sensor_correction.gyro_scale_1[1];
+		rates(2) = (_sensor_gyro.z - _sensor_correction.gyro_offset_1[2]) * _sensor_correction.gyro_scale_1[2];
+
+	} else if (_selected_gyro == 2) {
+		rates(0) = (_sensor_gyro.x - _sensor_correction.gyro_offset_2[0]) * _sensor_correction.gyro_scale_2[0];
+		rates(1) = (_sensor_gyro.y - _sensor_correction.gyro_offset_2[1]) * _sensor_correction.gyro_scale_2[1];
+		rates(2) = (_sensor_gyro.z - _sensor_correction.gyro_offset_2[2]) * _sensor_correction.gyro_scale_2[2];
+
+	} else {
+		rates(0) = _sensor_gyro.x;
+		rates(1) = _sensor_gyro.y;
+		rates(2) = _sensor_gyro.z;
+	}
+
+	// rotate corrected measurements from sensor to body frame
+	rates = _board_rotation * rates;
+
+	// correct for in-run bias errors
+	rates(0) -= _ctrl_state.roll_rate_bias;
+	rates(1) -= _ctrl_state.pitch_rate_bias;
+	rates(2) -= _ctrl_state.yaw_rate_bias;
+
+	math::Vector<3> rates_p_scaled = _params.rate_p.emult(pid_attenuations(_params.tpa_breakpoint_p, _params.tpa_rate_p));
+	//math::Vector<3> rates_i_scaled = _params.rate_i.emult(pid_attenuations(_params.tpa_breakpoint_i, _params.tpa_rate_i));
+	math::Vector<3> rates_d_scaled = _params.rate_d.emult(pid_attenuations(_params.tpa_breakpoint_d, _params.tpa_rate_d));
+
+	/* angular rates error */
+	math::Vector<3> rates_err = _rates_sp - rates;
+	/* wangxy668 inner loop controller*/
+	float beta ;
+	float alpha ;
+	float kl = 0.02f;
+	_adaptive_time = _adaptive_time +dt;
+	// adaptive code//
+	if (_adaptive_time > 0.0194f) {
+		float beta0 = _theta_rate_beta(0)* _adaptive_time;
+		float alpha0 = 1.0f -beta0;
+		float beta1;
+		float alpha1;
+		float lamta1 = 0.05f;
+		float lamta2 = 0.01f;
+		float temp1;
+		for (unsigned i = 1; i < 3; i++) {
+			_theta_rate(i) = _theta_rate(i-1);
+		}
+		_theta_rate(0) = rates(1) ;
+		float u0=_theta_rate_input(0) + _theta_rate(0);
+		temp0=_theta_rate(0)-alpha0*_theta_rate(1)-beta0*u0;
+		if ( (_theta_rate_input(0)*_theta_rate_input(1))<0.0009f || (_theta_rate(0) *_theta_rate(1) )<0.0009f){
+			temp0=0.0f;
+		}
+		temp0=0.0f;//0.0f stand for no adaptive
+		temp1=lamta1/(_theta_rate(1)*_theta_rate(1) + u0*u0 + lamta2);
+		beta1=beta0 + temp1*temp0*u0;
+
+		alpha1=alpha0+ temp1*temp0*_theta_rate(1);
+		alpha1=1.0f *alpha1;
+		for (unsigned i = 1; i < 3; i++) {
+			_theta_rate_alpha(i) =_theta_rate_alpha(i-1);
+			_theta_rate_beta(i) = _theta_rate_beta(i-1);
+			_theta_rate_ck(i) = _theta_rate_ck(i-1);
+			_theta_rate_input(i) = _theta_rate_input(i-1);
+		}
+		_theta_rate_beta(0) = beta1 /_adaptive_time;
+		if (_theta_rate_beta(0) > 100.0f)
+		{
+			_theta_rate_beta(0)=100.0f;
+		}
+		else if(_theta_rate_beta(0) < 1.0f)
+		{
+			_theta_rate_beta(0) =1.0f;
+		}
+		_theta_rate_alpha(0) = 1.0f - _theta_rate_beta(0) ;
+
+		_theta_rate_ck(0) = _theta_rate_ck(0)+ temp1*temp0*1.0f;
+		_theta_rate_input(0) = _theta_rate_control_prev;
+		for (unsigned i = 1; i < 3; i++) {
+			_theta_rate_input(i) = _theta_rate_input(i-1);
+		}
+		_v_rates_sp.DT = dt;
+		_v_rates_sp.AT = _adaptive_time;
+		_v_rates_sp.Beta = _theta_rate_beta(0);
+		_v_rates_sp.BetaT = beta1;
+		_v_rates_sp.U = _theta_rate_input(0);
+		_v_rates_sp.Rt0= _theta_rate(0);
+		_v_rates_sp.Rt1= _theta_rate(1);
+		_v_rates_sp.Tp0= temp0;
+
+		_theta_rate_input(0) = _theta_rate_control_prev;
+		_adaptive_time = 0.0f;
+	}
+
+	_att_control = rates_p_scaled.emult(rates_err) +
+		_rates_int +
+		rates_d_scaled.emult(_rates_prev - rates) / dt +
+		_params.rate_ff.emult(_rates_sp);
+
+
+	//_theta_rate_sp = _theta_rate_sp *(1.0f - 10.0f * dt) + _rates_sp(1)*(10.0f * dt);
+	_theta_rate_sp = _rates_sp(1);
+	/*
+	   _att_control(1) = (_rates_sp(1) - _rates_sp_prev(1) * alpha) / (beta + 0.0001f) +
+	   (dt / 0.02f) * kl * rates_err(1) * alpha / (beta + 0.0001f) -
+	   rates(1);
+	 */
+	beta = _theta_rate_beta(0)* dt;
+
+
+	//        PX4_INFO("\t%8.4f", (double)dt );
+	alpha = 1.0f -beta*0.1f;
+	/*_att_control(1) = (_theta_rate_sp - _theta_rate_sp_prev* alpha) / (beta + 0.0001f) +
+	  (dt / 0.02f) * kl * rates_err(1) * alpha / (beta + 0.0001f) -
+	  rates(1);*/
+	kl=1-8.0f*dt;
+	_att_control(1) =  (1-kl/alpha) * rates_err(1) * alpha / (beta + 0.0001f) +
+		0.1f*_theta_rate_sp - 0.1f* rates(1);
+	if (_att_control(1) >4.0f)
+	{
+		_att_control(1) =4.0f;
+	}
+	else if (_att_control(1)  < -4.0f)
+	{
+		_att_control(1) =-4.0f;
+	}
+	_rates_sp_prev = _rates_sp;
+	_theta_rate_sp_prev = _theta_rate_sp;
+	_rates_prev = rates;
+	_theta_rate_control_prev = _att_control(1);
+	_att_control(1) = 0.15f* _att_control(1);
+	/* update integral only if motors are providing enough thrust to be effective */
+	if (_thrust_sp > MIN_TAKEOFF_THRUST) {
+		for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
+			// Check for positive control saturation
+			bool positive_saturation =
+				((i == AXIS_INDEX_ROLL) && _saturation_status.flags.roll_pos) ||
+				((i == AXIS_INDEX_PITCH) && _saturation_status.flags.pitch_pos) ||
+				((i == AXIS_INDEX_YAW) && _saturation_status.flags.yaw_pos);
+
+			// Check for negative control saturation
+			bool negative_saturation =
+				((i == AXIS_INDEX_ROLL) && _saturation_status.flags.roll_neg) ||
+				((i == AXIS_INDEX_PITCH) && _saturation_status.flags.pitch_neg) ||
+				((i == AXIS_INDEX_YAW) && _saturation_status.flags.yaw_neg);
+
+			// prevent further positive control saturation
+			if (positive_saturation) {
+				rates_err(i) = math::min(rates_err(i), 0.0f);
+
+			}
+
+			// prevent further negative control saturation
+			if (negative_saturation) {
+				rates_err(i) = math::max(rates_err(i), 0.0f);
+
+			}
+
+			// Perform the integration using a first order method and do not propaate the result if out of range or invalid
+			float rate_i = _rates_int(i) + _params.rate_i(i) * rates_err(i) * dt;
+
+			if (PX4_ISFINITE(rate_i) && rate_i > -_params.rate_int_lim(i) && rate_i < _params.rate_int_lim(i)) {
+				_rates_int(i) = rate_i;
+
+			}
+		}
+	}
+
+	/* explicitly limit the integrator state */
+	for (int i = AXIS_INDEX_ROLL; i < AXIS_COUNT; i++) {
+		_rates_int(i) = math::constrain(_rates_int(i), -_params.rate_int_lim(i), _params.rate_int_lim(i));
+
+	}
+}
+
+
+
+
+
 void
 MulticopterAttitudeControl::task_main_trampoline(int argc, char *argv[])
 {
@@ -1246,7 +1501,12 @@ MulticopterAttitudeControl::task_main()
 			}
 
 			if (_v_control_mode.flag_control_rates_enabled) {
-				control_attitude_rates(dt);
+				//官方mc_att_control内环程序段
+				control_attitude_rates(dt);//PX4 system code
+
+				//rain 2018-4-25 11:21:53
+				//当更换内环自适应PID控制器时，替换上调语句，
+				//control_attitude_rates_adaptive(dt);//314 adaptive inaner loop controller
 
 				/* publish actuator controls */
 				_actuators.control[0] = (PX4_ISFINITE(_att_control(0))) ? _att_control(0) : 0.0f;

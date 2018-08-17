@@ -507,7 +507,10 @@ PWMSim::task_main()
 				    outputs.output[i] <= 1.0f) {
 					/* scale for PWM output 1000 - 2000us */
 					outputs.output[i] = 1500 + (500 * outputs.output[i]);
-
+					/*为改变下限至800，扩大负值比例 rain 2018年3月25日10:24:38*/
+				/*	if(outputs.output[i] < 0.01f){//add
+						outputs.output[i] = 1500 + (700 * outputs.output[i]);//add
+						}*/
 				} else {
 					/*
 					 * Value is NaN, INF or out of band - set to the minimum value.
@@ -684,6 +687,8 @@ PWMSim::pwm_ioctl(device::file_t *filp, int cmd, unsigned long arg)
 
 			for (unsigned i = 0; i < _num_outputs; i++) {
 				pwm->values[i] = 1000;
+				/*修改为800，raw_value=1000 rain 2018年3月25日10:18:36*/
+				//pwm->values[i] = 800;
 			}
 
 			pwm->channel_count = _num_outputs;

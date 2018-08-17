@@ -94,7 +94,9 @@ __BEGIN_DECLS
 /**
  * Default minimum PWM in us
  */
-#define PWM_DEFAULT_MIN 1000
+
+ //rain 2018-4-18
+#define PWM_DEFAULT_MIN 600
 
 /**
  * Highest PWM allowed as the minimum PWM

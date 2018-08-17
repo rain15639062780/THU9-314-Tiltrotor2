@@ -3406,7 +3406,7 @@ PARAM_DEFINE_INT32(PWM_RATE, 400);
  * @unit us
  * @group PWM Outputs
  */
-PARAM_DEFINE_INT32(PWM_MIN, 1000);
+PARAM_DEFINE_INT32(PWM_MIN, 1000);//测试升降舵修改为800（raw=1000）rain 2018/3/21
 
 /**
  * Set the maximum PWM for the main outputs
@@ -3458,7 +3458,7 @@ PARAM_DEFINE_INT32(PWM_DISARMED, 900);
  * @unit us
  * @group PWM Outputs
  */
-PARAM_DEFINE_INT32(PWM_AUX_MIN, 1000);
+PARAM_DEFINE_INT32(PWM_AUX_MIN, 1000);//测试升降舵修改为800（raw=1000）rain 2018     /3/22
 
 /**
  * Set the maximum PWM for the auxiliary outputs

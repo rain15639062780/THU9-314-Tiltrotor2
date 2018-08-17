@@ -1844,6 +1844,17 @@ int sdlog2_thread_main(int argc, char *argv[])
 				log_msg.body.log_ARSP.roll_rate_sp = buf.rates_sp.roll;
 				log_msg.body.log_ARSP.pitch_rate_sp = buf.rates_sp.pitch;
 				log_msg.body.log_ARSP.yaw_rate_sp = buf.rates_sp.yaw;
+				/***********************************************/
+				//rain 2018-4-26 11:16:42
+				  log_msg.body.log_ARSP.dt = buf.rates_sp.DT;
+				  log_msg.body.log_ARSP.at = buf.rates_sp.AT;
+				  log_msg.body.log_ARSP.beta = buf.rates_sp.Beta;
+				  log_msg.body.log_ARSP.betat = buf.rates_sp.BetaT;
+				  log_msg.body.log_ARSP.u = buf.rates_sp.U;
+				  log_msg.body.log_ARSP.rt0 = buf.rates_sp.Rt0;
+				  log_msg.body.log_ARSP.rt1 = buf.rates_sp.Rt1;
+				  log_msg.body.log_ARSP.tp0 = buf.rates_sp.Tp0;
+				 /*********************************************/
 				LOGBUFFER_WRITE_AND_COUNT(ARSP);
 			}
 

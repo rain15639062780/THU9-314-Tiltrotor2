@@ -212,6 +212,19 @@ struct log_ARSP_s {
 	float roll_rate_sp;
 	float pitch_rate_sp;
 	float yaw_rate_sp;
+
+	/*********************/
+	//rain 2018-4-26 10:28:22
+	float	dt;
+	float	at;
+	float	beta;
+	float	betat;
+	float	u;
+	float	rt0;
+	float	rt1;
+	float	tp0;
+
+	/*********************/
 };
 
 /* --- FLOW - OPTICAL FLOW --- */
@@ -688,7 +701,13 @@ static const struct log_format_s log_formats[] = {
 	LOG_FORMAT_S(OUT0, OUT, "ffffffff",		"Out0,Out1,Out2,Out3,Out4,Out5,Out6,Out7"),
 	LOG_FORMAT_S(OUT1, OUT, "ffffffff",		"Out0,Out1,Out2,Out3,Out4,Out5,Out6,Out7"),
 	LOG_FORMAT(AIRS, "fffff",			"IAS,TAS,TASraw,Temp,Confidence"),
-	LOG_FORMAT(ARSP, "fff",			"RollRateSP,PitchRateSP,YawRateSP"),
+	
+	//rain 2018-4-26 10:42:36
+	//LOG_FORMAT(ARSP, "fff",			"RollRateSP,PitchRateSP,YawRateSP"),
+	LOG_FORMAT(ARSP, "fffffffffff", 			"RollRateSP,PitchRateSP,YawRateSP,Dt,At,Beta,Betat,U,Rt0,Rt1,Tp0"),
+
+	
+	
 	LOG_FORMAT(FLOW, "BffffffLLHhB",	"ID,RawX,RawY,RX,RY,RZ,Dist,TSpan,DtSonar,FrmCnt,GT,Qlty"),
 	LOG_FORMAT(GPOS, "LLfffffff",		"Lat,Lon,Alt,VelN,VelE,VelD,EPH,EPV,TALT"),
 	LOG_FORMAT(GPSP, "LLffBfbf",		"Lat,Lon,Alt,Yaw,Type,LoitR,LoitDir,PitMin"),

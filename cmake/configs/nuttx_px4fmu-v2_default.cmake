@@ -44,11 +44,11 @@ set(config_module_list
 	drivers/frsky_telemetry
 	modules/sensors
 	#drivers/mkblctrl
-	drivers/px4flow
+	#drivers/px4flow		#sub by rsin
 	#drivers/oreoled
 	drivers/vmount
 	drivers/pwm_input
-	drivers/camera_trigger
+	#drivers/camera_trigger	#sub by rain
 	drivers/bst
 	#drivers/snapdragon_rc_pwm
 	drivers/lis3mdl
@@ -100,7 +100,7 @@ set(config_module_list
 	modules/gpio_led
 	#modules/uavcan
 	modules/land_detector
-	modules/camera_feedback
+	#modules/camera_feedback
 
 	#
 	# Estimation modules
@@ -192,6 +192,9 @@ set(config_module_list
 
 	# Hardware test
 	#examples/hwtest
+
+	# test self_app by rain
+    # examples/px4_simple_app
 )
 
 set(config_extra_builtin_cmds
